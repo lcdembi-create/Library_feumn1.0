@@ -1,0 +1,57 @@
+# Environment files
+.env
+.env.local
+*.conf
+!config/koha-conf-feumn.xml
+!config/logging.conf
+
+# Secrets
+**/feumn-secrets.conf
+**/*.key
+**/*.pem
+**/*.crt
+
+# Logs
+*.log
+/var/log/
+/logs/
+
+# Backups
+/backup/
+*.sql.gz
+*.tar.gz
+
+# Database
+*.sql
+!sql/*.sql
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Test coverage
+/cover_db/
+/coverage/
+*.trv
+*.sarif
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Temp files
+/tmp/
+*.tmp
+*.temp
+
+# Docker
+docker/data/

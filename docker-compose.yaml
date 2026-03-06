@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: feumn-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: koha_feumn
+      MYSQL_USER: koha_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d
+    networks:
+      - feumn-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: feumn-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - feumn-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  koha:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: feumn-koha
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"  # Staff interface
+      - "8081:80"    # OPAC
+    environment:
+      KOHA_DB_HOST: mysql
+      KOHA_DB_NAME: koha_feumn
+      KOHA_DB_USER: koha_user
+      KOHA_DB_PASS: ${MYSQL_PASSWORD}
+      KOHA_ADMIN_USER: ${KOHA_ADMIN_USER}
+      KOHA_ADMIN_PASS: ${KOHA_ADMIN_PASS}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      FEUMN_EMIS_API_KEY: ${FEUMN_EMIS_API_KEY}
+      FEUMN_EMIS_MOCK: ${FEUMN_EMIS_MOCK:-0}
+    volumes:
+      - koha_data:/usr/share/koha
+      - ./plugins:/usr/share/koha/lib/Koha/Plugin
+      - ./config/koha-conf-feumn.xml:/etc/koha/sites/koha/koha-conf.xml
+      - ./config/logging.conf:/etc/koha/sites/koha/logging.conf
+      - ./i18n:/usr/share/koha/misc/translator/po
+      - ./frontend:/usr/share/koha/opac/htdocs/feumn
+      - ./api:/usr/share/koha/api
+      - ./scripts:/opt/koha-feumn/scripts
+    networks:
+      - feumn-network
+
+  koha-cron:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cron
+    container_name: feumn-koha-cron
+    restart: unless-stopped
+    depends_on:
+      - koha
+      - mysql
+    environment:
+      KOHA_DB_HOST: mysql
+      KOHA_DB_NAME: koha_feumn
+      KOHA_DB_USER: koha_user
+      KOHA_DB_PASS: ${MYSQL_PASSWORD}
+    volumes:
+      - ./scripts/maintenance:/etc/periodic/
+      - koha_data:/usr/share/koha
+    networks:
+      - feumn-network
+
+networks:
+  feumn-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  koha_data:
