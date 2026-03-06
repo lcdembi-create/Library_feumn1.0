@@ -1,0 +1,33 @@
+# Configuração para ambiente de desenvolvimento
+environment: development
+
+database:
+  host: localhost
+  name: koha_feumn_dev
+  user: koha_dev
+  password: dev_password
+
+emis:
+  mock: true
+  mock_data:
+    payment_url: "https://mock.emis.gov.ao/pay/{reference}"
+    barcode_generator: "https://barcode.tec-it.com/barcode.ashx?data={reference}"
+  real_api:
+    url: "https://emis.minfin.gov.ao/api/v1"
+    timeout: 30
+
+logging:
+  level: DEBUG
+  file: /var/log/koha/feumn-dev.log
+
+features:
+  mock_webhooks: true
+  skip_ssl_verify: true
+  auto_confirm_payments: true
+
+users:
+  test:
+    - borrowernumber: 9999
+      name: "Usuário Teste"
+      category: "EST_FEUMN"
+      status: "active"

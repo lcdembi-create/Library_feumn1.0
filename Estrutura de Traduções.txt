@@ -1,0 +1,59 @@
+# lib/Koha/I18N/FEUMN.pm
+package Koha::I18N::FEUMN;
+
+use Modern::Perl;
+use Locale::Maketext;
+use File::Spec;
+use JSON::XS;
+
+our @ISA = qw(Locale::Maketext);
+
+# Idiomas suportados
+our %Lexicon = (
+    'en' => {},
+    'pt' => {},
+    'fr' => {},
+);
+
+sub new {
+    my ($class, $lang) = @_;
+    
+    $lang ||= 'pt';
+    my $self = $class->SUPER::new($lang);
+    
+    # Carregar léxico do idioma
+    $self->_load_lexicon($lang);
+    
+    return $self;
+}
+
+sub _load_lexicon {
+    my ($self, $lang) = @_;
+    
+    my $lexicon_file = File::Spec->catfile(
+        '/usr/share/koha/misc/translator/po',
+        "feumn-$lang.json"
+    );
+    
+    if (-f $lexicon_file) {
+        open my $fh, '<', $lexicon_file or die "Cannot open $lexicon_file: $!";
+        my $json = do { local $/; <$fh> };
+        close $fh;
+        
+        my $lexicon = decode_json($json);
+        $self->SUPER::_load_lexicon($lexicon);
+    }
+}
+
+# Métodos de tradução
+sub t {
+    my ($self, $string, @params) = @_;
+    return $self->maketext($string, @params);
+}
+
+sub n {
+    my ($self, $singular, $plural, $n, @params) = @_;
+    return $self->maketext($self->numerate($singular, $plural, $n), $n, @params);
+}
+
+1;

@@ -1,0 +1,150 @@
+package Koha::REST::V1::FEUMN::Faculdades;
+
+use Modern::Perl;
+use Mojo::Base 'Mojolicious::Controller';
+use Koha::Database;
+use JSON::XS;
+
+sub list {
+    my $c = shift;
+    
+    my $dbh = Koha::Database->new()->schema()->storage()->dbh();
+    my $faculdades = $dbh->selectall_arrayref(
+        "SELECT * FROM feumn_faculdades WHERE ativo = 1 ORDER BY nome",
+        { Slice => {} }
+    );
+    
+    $c->render(json => { data => $faculdades });
+}
+
+sub get {
+    my $c = shift;
+    my $id = $c->param('id');
+    
+    my $dbh = Koha::Database->new()->schema()->storage()->dbh();
+    my $faculdade = $dbh->selectrow_hashref(
+        "SELECT * FROM feumn_faculdades WHERE id = ?",
+        undef, $id
+    );
+    
+    unless ($faculdade) {
+        return $c->render(json => { error => 'Faculdade não encontrada' }, status => 404);
+    }
+    
+    # Buscar bibliotecas da faculdade
+    my $bibliotecas = $dbh->selectall_arrayref(
+        "SELECT * FROM feumn_bibliotecas WHERE faculdade_id = ? AND ativo = 1",
+        { Slice => {} }, $id
+    );
+    
+    # Buscar categorias
+    my $categorias = $dbh->selectall_arrayref(
+        "SELECT * FROM feumn_categorias_usuarios WHERE faculdade_id = ? AND ativo = 1",
+        { Slice => {} }, $id
+    );
+    
+    $faculdade->{bibliotecas} = $bibliotecas;
+    $faculdade->{categorias} = $categorias;
+    
+    $c->render(json => { data => $faculdade });
+}
+
+sub create {
+    my $c = shift;
+    my $data = $c->req->json;
+    
+    my $dbh = Koha::Database->new()->schema()->storage()->dbh();
+    
+    eval {
+        $dbh->do(
+            "INSERT INTO feumn_faculdades (codigo, nome, sigla, endereco, telefone, email, logo_url) 
+             VALUES (?, ?, ?, ?, ?, ?, ?)",
+            undef,
+            $data->{codigo},
+            $data->{nome},
+            $data->{sigla},
+            $data->{endereco},
+            $data->{telefone},
+            $data->{email},
+            $data->{logo_url}
+        );
+    };
+    
+    if ($@) {
+        return $c->render(json => { error => $@ }, status => 400);
+    }
+    
+    my $id = $dbh->last_insert_id(undef, undef, 'feumn_faculdades', 'id');
+    
+    $c->render(json => { 
+        success => 1,
+        id => $id,
+        message => 'Faculdade criada com sucesso'
+    });
+}
+
+sub update {
+    my $c = shift;
+    my $id = $c->param('id');
+    my $data = $c->req->json;
+    
+    my $dbh = Koha::Database->new()->schema()->storage()->dbh();
+    
+    my $sets = [];
+    my @values;
+    
+    foreach my $field (qw(codigo nome sigla endereco telefone email logo_url ativo)) {
+        if (exists $data->{$field}) {
+            push @$sets, "$field = ?";
+            push @values, $data->{$field};
+        }
+    }
+    
+    unless (@$sets) {
+        return $c->render(json => { error => 'Nenhum campo para atualizar' }, status => 400);
+    }
+    
+    push @values, $id;
+    
+    eval {
+        $dbh->do(
+            "UPDATE feumn_faculdades SET " . join(', ', @$sets) . " WHERE id = ?",
+            undef, @values
+        );
+    };
+    
+    if ($@) {
+        return $c->render(json => { error => $@ }, status => 400);
+    }
+    
+    $c->render(json => { 
+        success => 1,
+        message => 'Faculdade atualizada com sucesso'
+    });
+}
+
+sub delete {
+    my $c = shift;
+    my $id = $c->param('id');
+    
+    my $dbh = Koha::Database->new()->schema()->storage()->dbh();
+    
+    # Soft delete
+    eval {
+        $dbh->do(
+            "UPDATE feumn_faculdades SET ativo = 0 WHERE id = ?",
+            undef, $id
+        );
+    };
+    
+    if ($@) {
+        return $c->render(json => { error => $@ }, status => 400);
+    }
+    
+    $c->render(json => { 
+        success => 1,
+        message => 'Faculdade desativada com sucesso'
+    });
+}
+
+1;

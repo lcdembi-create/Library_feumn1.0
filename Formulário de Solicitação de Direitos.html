@@ -1,0 +1,61 @@
+<form id="rights-request">
+    <h3>Solicitação de Direitos do Titular</h3>
+    
+    <label>Tipo de Solicitação:</label>
+    <select name="request_type" required>
+        <option value="access">Acesso aos dados</option>
+        <option value="rectification">Retificação</option>
+        <option value="erasure">Apagamento</option>
+        <option value="portability">Portabilidade</option>
+        <option value="objection">Oposição</option>
+    </select>
+    
+    <label>Nome Completo:</label>
+    <input type="text" name="full_name" required>
+    
+    <label>Número de Estudante/Funcionário:</label>
+    <input type="text" name="id_number" required>
+    
+    <label>Email para contato:</label>
+    <input type="email" name="email" required>
+    
+    <label>Telefone:</label>
+    <input type="tel" name="phone">
+    
+    <label>Descrição da solicitação:</label>
+    <textarea name="description" rows="5" required></textarea>
+    
+    <label>Documento de identificação:</label>
+    <input type="file" name="id_document" accept=".pdf,.jpg,.png" required>
+    
+    <label>
+        <input type="checkbox" required>
+        Confirmo que as informações fornecidas são verdadeiras
+    </label>
+    
+    <button type="submit">Enviar Solicitação</button>
+</form>
+
+<script>
+document.getElementById('rights-request').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    
+    try {
+        const response = await fetch('/api/v1/privacy/request', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            alert('Solicitação enviada com sucesso! Você receberá uma resposta em até 15 dias úteis.');
+            e.target.reset();
+        } else {
+            throw new Error('Erro ao enviar solicitação');
+        }
+    } catch (error) {
+        alert('Erro ao enviar solicitação. Tente novamente mais tarde.');
+    }
+});
+</script>

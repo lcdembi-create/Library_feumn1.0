@@ -1,0 +1,75 @@
+# handler/oauth_callback.pl
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use CGI;
+use JSON;
+use Koha::Auth::OAuth2::FEUMN;
+use Koha::Database;
+
+my $cgi = CGI->new;
+my $code = $cgi->param('code');
+my $state = $cgi->param('state');
+
+# Verificar state (CSRF protection)
+my $session = CGI::Session->load() or die "No session";
+unless ($state eq $session->param('oauth_state')) {
+    print $cgi->redirect('/opac-user.pl?error=invalid_state');
+    exit;
+}
+
+# Configurar OAuth
+my $oauth = Koha::Auth::OAuth2::FEUMN->new(
+    redirect_uri => 'https://biblioteca.fe-umn.ao/oauth/callback'
+);
+
+# Trocar code por token
+my $token_data = $oauth->exchange_code($code);
+unless ($token_data) {
+    print $cgi->redirect('/opac-user.pl?error=auth_failed');
+    exit;
+}
+
+# Obter informações do usuário
+my $user_info = $oauth->get_user_info($token_data->{access_token});
+unless ($user_info) {
+    print $cgi->redirect('/opac-user.pl?error=userinfo_failed');
+    exit;
+}
+
+# Buscar ou criar usuário no Koha
+my $dbh = Koha::Database->new()->schema()->storage()->dbh();
+
+my $borrower = $dbh->selectrow_hashref(
+    "SELECT borrowernumber FROM borrowers WHERE email = ?",
+    undef, $user_info->{email}
+);
+
+unless ($borrower) {
+    # Criar novo usuário
+    my $sth = $dbh->prepare(
+        "INSERT INTO borrowers (cardnumber, surname, firstname, email, categorycode, branchcode)
+         VALUES (?, ?, ?, ?, ?, ?)"
+    );
+    
+    $sth->execute(
+        $user_info->{student_id},
+        $user_info->{surname},
+        $user_info->{given_name},
+        $user_info->{email},
+        $user_info->{category} // 'EST_FEUMN',
+        $user_info->{faculty} // 'FEUMN'
+    );
+    
+    $borrower->{borrowernumber} = $dbh->last_insert_id(undef, undef, 'borrowers', 'borrowernumber');
+}
+
+# Criar sessão Koha
+use C4::Auth;
+use C4::Session;
+
+my $session_id = C4::Session::create_session($borrower->{borrowernumber});
+
+# Redirecionar para OPAC
+print $cgi->redirect('/cgi-bin/koha/opac-user.pl?session=' . $session_id);

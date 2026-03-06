@@ -1,0 +1,88 @@
+name: Test Suite FEUMN
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        koha-version: ['22.05', '23.11', '25.11']
+        perl-version: ['5.32', '5.34', '5.36']
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Perl ${{ matrix.perl-version }}
+      uses: shogo82148/actions-setup-perl@v1
+      with:
+        perl-version: ${{ matrix.perl-version }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Cache CPAN modules
+      uses: actions/cache@v3
+      with:
+        path: ~/perl5
+        key: ${{ runner.os }}-build-${{ matrix.perl-version }}-${{ hashFiles('**/cpanfile') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ matrix.perl-version }}-
+
+    - name: Install Perl dependencies
+      run: |
+        cpanm --notest --installdeps .
+        cpanm Test::More Test::Deep Test::Exception Test::MockModule
+
+    - name: Install Node dependencies
+      run: |
+        npm install
+        npm install -g jest cypress
+
+    - name: Setup Koha Test Environment
+      run: |
+        # Instalar Koha
+        wget -O- https://debian.koha-community.org/koha/gpg.asc | sudo apt-key add -
+        echo "deb https://debian.koha-community.org/koha ${{ matrix.koha-version }} main" | sudo tee /etc/apt/sources.list.d/koha.list
+        sudo apt-get update
+        sudo apt-get install -y koha-common
+        
+        # Criar instância de teste
+        sudo koha-create --create-db feumntest
+        sudo koha-plack --enable feumntest
+        sudo koha-plack --start feumntest
+
+    - name: Run Perl Tests
+      run: |
+        prove -lv t/FEUMN/
+        prove -lv t/Integration/
+
+    - name: Run JavaScript Tests
+      run: |
+        npm test -- --coverage
+
+    - name: Run Cypress Tests
+      run: |
+        # Iniciar servidor de teste
+        perl mock/emis_mock_server.pl daemon -l http://localhost:3000 &
+        npx cypress run
+
+    - name: Upload Coverage Reports
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage/lcov.info,./cover_db/coverage.json
+        flags: unittests
+        name: codecov-umbrella
+
+    - name: Test Summary
+      run: |
+        echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Perl Tests: $(grep -c 'ok' test-results.txt)" >> $GITHUB_STEP_SUMMARY
+        echo "✅ JavaScript Tests: $(grep -c 'pass' jest-results.json)" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Cypress Tests: $(grep -c 'passed' cypress-results.json)" >> $GITHUB_STEP_SUMMARY

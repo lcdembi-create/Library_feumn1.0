@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Test2::V0;
+use Test2::Tools::Mock;
+use Test2::Plugin::Coverage;
+use Test::MockModule;
+use Test::Deep;
+use Test::Exception;
+use lib '/usr/share/koha/lib';
+
+# Mock do módulo Koha
+my $koha_mock = Test::MockModule->new('Koha::Patrons');
+$koha_mock->mock('find', sub {
+    my ($class, $id) = @_;
+    return bless {
+        borrowernumber => $id,
+        firstname => 'João',
+        surname => 'Teste',
+        categorycode => 'EST_FEUMN',
+        tax_number => '123456789'
+    }, 'Koha::Patron';
+});
+
+# Carregar plugin
+use_ok('Koha::Plugin::FEUMNTaxas');
+
+# Testar criação do objeto
+my $plugin = new_ok('Koha::Plugin::FEUMNTaxas');
+ok($plugin, 'Plugin carregado com sucesso');
+
+# Testar cálculo de taxa
+subtest 'Cálculo de taxas' => sub {
+    my $self = $plugin;
+    
+    my $taxa = $self->calcular_taxa('EST_FEUMN');
+    is($taxa, 5000, 'Taxa estudante FEUMN correta');
+    
+    $taxa = $self->calcular_taxa('EST_OUTRA');
+    is($taxa, 10000, 'Taxa estudante externo correta');
+    
+    $taxa = $self->calcular_taxa('DOC');
+    is($taxa, 0, 'Taxa docente correta');
+    
+    $taxa = $self->calcular_taxa('INVALIDA');
+    is($taxa, 0, 'Categoria inválida retorna 0');
+};
+
+# Testar geração de referência EMIS (com mock)
+subtest 'Geração de referência EMIS' => sub {
+    my $self = $plugin;
+    
+    # Mock do LWP::UserAgent
+    my $lwp_mock = Test::MockModule->new('LWP::UserAgent');
+    $lwp_mock->mock('post', sub {
+        my ($self, $url, %args) = @_;
+        return HTTP::Response->new(200, 'OK', [], encode_json({
+            payment_url => 'https://emis.gov.ao/pay/123',
+            payment_barcode => '1234567890'
+        }));
+    });
+    
+    my $referencia = $self->gerar_referencia_emis(1, 5000);
+    
+    ok($referencia, 'Referência gerada');
+    is($referencia->{reference}, qr/^FEUMN\d{14}$/, 'Formato de referência válido');
+    ok($referencia->{emis_url}, 'URL EMIS gerada');
+};
+
+# Testar bloqueio de usuário
+subtest 'Bloqueio de usuário' => sub {
+    my $self = $plugin;
+    
+    # Mock do DBH
+    my $dbh_mock = Test::MockModule->new('DBI::db');
+    $dbh_mock->mock('do', sub { return 1 });
+    
+    $self->bloquear_usuario(1);
+    
+    # Verificar se log foi chamado
+    # (assumindo que o logger foi mockado)
+};
+
+done_testing();

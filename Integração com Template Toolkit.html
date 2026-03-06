@@ -1,0 +1,30 @@
+<!-- Template de exemplo -->
+[% USE i18n %]
+[% USE n %]
+
+<div class="welcome-message">
+    <h1>[% i18n('welcome_message') %]</h1>
+    <p>[% n('day', 'days', days_remaining, days_remaining) %]</p>
+</div>
+
+<div class="tax-info">
+    <h2>[% i18n('taxes.annual_fee') %]</h2>
+    <p>[% i18n('taxes.amount') %]: Kz [% amount %]</p>
+    <p>[% i18n('taxes.due_date') %]: [% due_date %]</p>
+    
+    [% IF status == 'pending' %]
+        <div class="alert alert-warning">
+            [% i18n('taxes.payment_pending') %]
+        </div>
+    [% ELSIF status == 'paid' %]
+        <div class="alert alert-success">
+            [% i18n('taxes.payment_confirmed') %]
+        </div>
+    [% END %]
+</div>
+
+<select id="language-selector" onchange="changeLanguage(this.value)">
+    <option value="pt" [% IF lang == 'pt' %]selected[% END %]>Português</option>
+    <option value="en" [% IF lang == 'en' %]selected[% END %]>English</option>
+    <option value="fr" [% IF lang == 'fr' %]selected[% END %]>Français</option>
+</select>

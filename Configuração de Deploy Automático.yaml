@@ -1,0 +1,89 @@
+# .github/workflows/deploy.yml
+name: Deploy FEUMN Koha
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Deploy to Staging
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USER }}
+        key: ${{ secrets.STAGING_SSH_KEY }}
+        script: |
+          cd /opt/koha-feumn
+          git pull origin main
+          ./scripts/deploy.sh staging
+          
+          # Rodar testes de fumaca
+          ./scripts/smoke-test.sh
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event.base_ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Notify Start
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"🚀 Iniciando deploy em produção..."}' \
+          ${{ secrets.SLACK_WEBHOOK }}
+
+    - name: Backup Production
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USER }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        script: |
+          /usr/local/bin/backup-koha-feumn.sh pre-deploy
+
+    - name: Deploy to Production
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USER }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        script: |
+          cd /opt/koha-feumn
+          git fetch --tags
+          git checkout ${{ github.ref_name }}
+          ./scripts/deploy.sh production
+
+    - name: Verify Deployment
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USER }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        script: |
+          ./scripts/health-check.sh
+          ./scripts/smoke-test.sh --production
+
+    - name: Notify Success
+      if: success()
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"✅ Deploy concluído com sucesso: ${{ github.ref_name }}"}' \
+          ${{ secrets.SLACK_WEBHOOK }}
+
+    - name: Notify Failure
+      if: failure()
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"❌ Falha no deploy. Verificar logs: ${{ github.run_id }}"}' \
+          ${{ secrets.SLACK_WEBHOOK }}

@@ -1,0 +1,269 @@
+
+---
+
+## 9. **Conformidade com Lei de Proteção de Dados**
+
+### 9.1 Política de Privacidade
+
+```markdown
+# POLÍTICA DE PRIVACIDADE E PROTEÇÃO DE DADOS
+## Biblioteca FEUMN - Universidade Mandume Ya Ndemufayo
+
+**Versão:** 2.0
+**Data:** 15 de Janeiro de 2024
+**Responsável:** Comissão de Proteção de Dados - FEUMN
+
+---
+
+## 1. INTRODUÇÃO
+
+A Biblioteca da Faculdade de Economia da Universidade Mandume Ya Ndemufayo (FEUMN) está comprometida com a proteção da privacidade e dos dados pessoais de seus usuários, em conformidade com a Lei Angolana de Proteção de Dados Pessoais (Lei n.º 22/11 de 17 de Junho) e o Regulamento Geral sobre a Proteção de Dados (RGPD).
+
+## 2. DADOS COLETADOS
+
+### 2.1 Dados de Identificação
+- Nome completo
+- Número de identificação (BI/Passaporte)
+- Número de estudante/funcionário
+- Data de nascimento
+- Fotografia (para cartão de biblioteca)
+
+### 2.2 Dados de Contacto
+- Email institucional
+- Email pessoal (opcional)
+- Telefone
+- Endereço residencial
+- Contacto de emergência
+
+### 2.3 Dados Acadêmicos
+- Faculdade
+- Curso
+- Ano de ingresso
+- Período
+- Situação (ativo/trancado/graduado)
+
+### 2.4 Dados de Utilização
+- Histórico de empréstimos
+- Reservas
+- Multas e pagamentos
+- Acessos ao sistema
+- Pesquisas realizadas
+
+## 3. BASE LEGAL PARA PROCESSAMENTO
+
+| Finalidade | Base Legal | Período de Retenção |
+|------------|------------|---------------------|
+| Gestão de empréstimos | Execução de contrato | Duração do vínculo + 5 anos |
+| Cobrança de taxas | Obrigação legal | 10 anos (fins fiscais) |
+| Comunicações institucionais | Interesse legítimo | Até oposição do titular |
+| Estatísticas | Interesse público | Anonimizado após 2 anos |
+| Segurança | Obrigação legal | 6 meses (logs) |
+
+## 4. DIREITOS DOS TITULARES
+
+### 4.1 Direito de Acesso
+Você pode solicitar uma cópia de todos os dados que temos sobre você.
+
+**Como solicitar:**
+1. Enviar email para: privacidade@biblioteca.fe-umn.ao
+2. Incluir: Nome completo, número de estudante
+3. Prazo de resposta: 15 dias úteis
+
+### 4.2 Direito de Retificação
+Pode solicitar correção de dados incorretos ou desatualizados.
+
+**Como solicitar:**
+1. Acessar "Minha Conta > Dados Pessoais"
+2. Fazer as alterações necessárias
+3. Ou contactar a secretaria da biblioteca
+
+### 4.3 Direito ao Apagamento ("Direito ao Esquecimento")
+Solicitar a eliminação de seus dados quando:
+- Não são mais necessários para a finalidade original
+- O consentimento foi retirado
+- Os dados foram processados ilegalmente
+
+**Exceções:** Dados necessários para cumprimento de obrigações legais (ex: registros fiscais de pagamentos) não podem ser apagados.
+
+### 4.4 Direito à Portabilidade
+Receber seus dados em formato estruturado (JSON/CSV) para transferência a outra instituição.
+
+### 4.5 Direito de Oposição
+Opor-se ao processamento para:
+- Marketing direto
+- Pesquisas (quando não anonimizadas)
+- Decisões automatizadas
+
+## 5. SEGURANÇA DOS DADOS
+
+### 5.1 Medidas Técnicas
+- ✅ Criptografia SSL/TLS para todas as comunicações
+- ✅ Dados sensíveis criptografados no banco
+- ✅ Acesso baseado em papéis (RBAC)
+- ✅ Logs de acesso auditados
+- ✅ Firewall e IDS/IPS
+- ✅ Backup criptografado
+
+### 5.2 Medidas Organizacionais
+- ✅ Política de senhas fortes
+- ✅ Acesso mínimo necessário
+- ✅ Treinamento anual de funcionários
+- ✅ Acordos de confidencialidade
+- ✅ Auditorias regulares
+
+### 5.3 Classificação dos Dados
+
+| Classificação | Exemplos | Acesso |
+|---------------|----------|--------|
+| Público | Nome, faculdade | Todos |
+| Interno | Email, telefone | Funcionários autorizados |
+| Restrito | BI, histórico | Gestores + Sistemas |
+| Confidencial | Dados de pagamento | Financeiro + Auditoria |
+
+## 6. COMPARTILHAMENTO DE DADOS
+
+### 6.1 Com Quem Compartilhamos
+
+| Destinatário | Dados Compartilhados | Finalidade | Base Legal |
+|--------------|---------------------|------------|------------|
+| EMIS (sistema bancário) | Nome, referência, valor | Processar pagamentos | Execução de contrato |
+| Secretaria Acadêmica | Situação do aluno | Verificar vínculo | Interesse legítimo |
+| Autoridades Judiciais | Conforme solicitação | Cumprir ordem legal | Obrigação legal |
+| Empresas parceiras (estágios) | Curso, ano (agregado) | Estatísticas | Interesse público |
+
+### 6.2 Transferências Internacionais
+Não realizamos transferências internacionais de dados. Todos os servidores estão localizados em Angola.
+
+## 7. COOKIES E TECNOLOGIAS SEMELHANTES
+
+### 7.1 Cookies Utilizados
+
+| Tipo | Finalidade | Duração | Base Legal |
+|------|------------|---------|------------|
+| Essenciais | Sessão, autenticação | Sessão | Necessário para funcionamento |
+| Funcionais | Preferências de idioma | 1 ano | Consentimento |
+| Analíticos | Estatísticas de uso | 2 anos | Consentimento |
+
+### 7.2 Gerenciamento de Cookies
+Você pode gerenciar suas preferências de cookies:
+1. No rodapé do site, clique em "Configurações de Cookies"
+2. Ajuste suas preferências
+3. Salve as alterações
+
+## 8. RETENÇÃO E ELIMINAÇÃO DE DADOS
+
+### 8.1 Períodos de Retenção
+
+| Categoria | Período | Após |
+|-----------|---------|------|
+| Dados cadastrais | 5 anos | Último empréstimo |
+| Histórico de empréstimos | 2 anos | Devolução |
+| Registros de pagamento | 10 anos | Data do pagamento |
+| Logs de acesso | 6 meses | Data do acesso |
+| Comunicações | 2 anos | Envio |
+
+### 8.2 Processo de Eliminação
+- Dados digitais: Sobrescrita segura (3 passagens)
+- Documentos físicos: Trituração
+- Backups: Rotação automática
+
+## 9. VIOLAÇÕES DE DADOS
+
+### 9.1 Procedimento em Caso de Violação
+1. **Identificação**: Detecção do incidente
+2. **Contenção**: Isolamento dos sistemas afetados
+3. **Investigação**: Análise do impacto
+4. **Notificação**: Informar titulares e autoridades
+5. **Correção**: Implementar medidas corretivas
+6. **Prevenção**: Revisar políticas e procedimentos
+
+### 9.2 Prazos de Notificação
+- Autoridade de Proteção de Dados: 72h
+- Titulares afetados: Imediato (quando alto risco)
+
+## 10. DECISÕES AUTOMATIZADAS
+
+### 10.1 Processos Automatizados
+- Bloqueio por falta de pagamento (após 7 dias)
+- Cálculo de multas
+- Recomendações de leitura
+
+### 10.2 Direito à Revisão Humana
+Você pode solicitar revisão manual de qualquer decisão automatizada:
+1. Enviar email para: revisao@biblioteca.fe-umn.ao
+2. Explicar o motivo da solicitação
+3. Um funcionário analisará e responderá em até 5 dias úteis
+
+## 11. ENCARREGADO DE PROTEÇÃO DE DADOS (DPO)
+
+**Nome:** Dr. António dos Santos
+**Email:** dpo@fe-umn.ao
+**Telefone:** +244 222 123 459
+**Endereço:** Rua Comandante Gika, 123, Luanda
+
+## 12. RECLAMAÇÕES
+
+### 12.1 Reclamações Internas
+1. Enviar para: privacidade@biblioteca.fe-umn.ao
+2. Prazo de resposta: 15 dias úteis
+
+### 12.2 Reclamações à Autoridade
+**Autoridade de Proteção de Dados de Angola**
+- Email: geral@apd.ao
+- Website: https://www.apd.ao
+- Telefone: +244 222 321 987
+
+## 13. CONSENTIMENTO
+
+### 13.1 Coleta de Consentimento
+Ao criar sua conta na biblioteca, você:
+- ✅ Concorda com esta política de privacidade
+- ✅ Autoriza o processamento de seus dados conforme descrito
+- ✅ Confirma que leu e entendeu seus direitos
+
+### 13.2 Retirada de Consentimento
+Você pode retirar seu consentimento a qualquer momento, mas isso pode afetar o uso dos serviços da biblioteca.
+
+## 14. ATUALIZAÇÕES DESTA POLÍTICA
+
+Esta política é revisada anualmente ou quando houver mudanças significativas. A versão atualizada será publicada no site com a data de revisão.
+
+**Última atualização:** 15/01/2024
+
+---
+
+## ANEXOS
+
+### Anexo A - Termo de Consentimento
+
+```html
+<form id="consent-form">
+    <h3>Termo de Consentimento para Tratamento de Dados</h3>
+    
+    <p>Eu, <input type="text" name="nome" required>, declaro que:</p>
+    
+    <label>
+        <input type="checkbox" required>
+        Li e compreendi a Política de Privacidade da Biblioteca FEUMN
+    </label>
+    
+    <label>
+        <input type="checkbox" required>
+        Autorizo o tratamento dos meus dados pessoais para gestão da biblioteca
+    </label>
+    
+    <label>
+        <input type="checkbox" name="marketing">
+        Aceito receber comunicações sobre novos serviços e eventos
+    </label>
+    
+    <label>
+        <input type="checkbox" name="research">
+        Permito o uso anonimizado dos meus dados para pesquisas acadêmicas
+    </label>
+    
+    <p>Data: <span id="current-date"></span></p>
+    <p>Assinatura: ______________________________</p>
+    
+    <button type="submit">Confirmar</button>
+</form>

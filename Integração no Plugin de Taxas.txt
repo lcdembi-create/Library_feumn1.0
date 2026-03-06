@@ -1,0 +1,35 @@
+# No plugin Koha::Plugin::FEUMNTaxas
+sub new {
+    my ($class, $args) = @_;
+    my $self = $class->SUPER::new($args);
+    
+    # Inicializar logger
+    $self->{logger} = Koha::Logging::FEUMN->new(
+        log_level => 'DEBUG',
+        log_dir   => '/var/log/koha/feumn'
+    );
+    
+    return $self;
+}
+
+sub gerar_referencia_emis {
+    my ($self, $borrowernumber, $amount) = @_;
+    
+    $self->{logger}->log_taxa('info', "Gerando referência para usuário $borrowernumber", {
+        amount => $amount,
+        time => scalar localtime
+    });
+    
+    eval {
+        # Código existente...
+    };
+    
+    if ($@) {
+        $self->{logger}->log_error($@, {
+            action => 'gerar_referencia',
+            borrowernumber => $borrowernumber,
+            critical => 1
+        });
+        return undef;
+    }
+}

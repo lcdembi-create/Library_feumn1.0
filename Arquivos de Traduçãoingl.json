@@ -1,0 +1,54 @@
+// feumn-en.json
+{
+    "library_name": "FEUMN Library",
+    "welcome_message": "Welcome to the Faculty of Economics Library",
+    
+    "taxes": {
+        "annual_fee": "Annual Fee",
+        "payment_pending": "Payment Pending",
+        "payment_confirmed": "Payment Confirmed",
+        "generate_reference": "Generate Reference",
+        "pay_now": "Pay Now",
+        "amount": "Amount",
+        "due_date": "Due Date",
+        "reference": "Reference",
+        
+        "messages": {
+            "payment_success": "Payment confirmed successfully!",
+            "payment_failed": "Payment failed. Please try again.",
+            "access_blocked": "Access blocked due to pending payment",
+            "access_granted": "Access granted until {valid_until}"
+        }
+    },
+    
+    "errors": {
+        "generic": "An error occurred. Please try again.",
+        "not_found": "Record not found",
+        "unauthorized": "Unauthorized access",
+        "validation": "Invalid data: {field}",
+        "connection": "Server connection error"
+    },
+    
+    "faculties": {
+        "FEUMN": "Faculty of Economics",
+        "FDU": "Faculty of Law",
+        "FCS": "Faculty of Social Sciences",
+        "FCT": "Faculty of Sciences and Technology",
+        "FMC": "Faculty of Medicine"
+    },
+    
+    "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+    }
+}

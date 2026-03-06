@@ -1,0 +1,180 @@
+#!/usr/bin/perl
+use Mojolicious::Lite;
+use Mojo::JSON qw(encode_json decode_json);
+use Mojo::Util qw(hmac_sha1_sum);
+use Data::UUID;
+use DateTime;
+
+# Configuração
+plugin 'Config' => {
+    default => {
+        mock_api_key => 'dev_key_123456',
+        mock_secret => 'dev_secret_abcdef'
+    }
+};
+
+# Armazenamento em memória
+my %payments;
+my %references;
+
+# Middleware para logging
+hook 'after_dispatch' => sub {
+    my ($c) = @_;
+    my $log = sprintf("[%s] %s %s - %d\n",
+        scalar localtime,
+        $c->req->method,
+        $c->req->url,
+        $c->res->code
+    );
+    open(my $fh, '>>', '/tmp/emis_mock.log');
+    print $fh $log;
+    close $fh;
+};
+
+# Gerar referência de pagamento
+post '/api/v1/payments' => sub {
+    my $c = shift;
+    my $data = $c->req->json;
+    
+    # Validar API key
+    my $api_key = $c->req->headers->authorization;
+    $api_key =~ s/Bearer //;
+    
+    unless ($api_key eq app->config->{mock_api_key}) {
+        return $c->render(json => { error => 'Invalid API key' }, status => 401);
+    }
+    
+    # Gerar referência única
+    my $ug = Data::UUID->new;
+    my $reference = sprintf("MOCK%s", $ug->create_str());
+    
+    my $payment = {
+        reference => $reference,
+        amount => $data->{amount},
+        description => $data->{description},
+        status => 'pending',
+        created_at => DateTime->now->iso8601,
+        due_date => $data->{due_date},
+        taxpayer_nif => $data->{taxpayer_nif}
+    };
+    
+    $payments{$reference} = $payment;
+    
+    # Gerar URL de pagamento mock
+    $payment->{payment_url} = sprintf("http://localhost:3000/pay/%s", $reference);
+    $payment->{payment_barcode} = sprintf("MOCK-BARCODE-%s", $reference);
+    
+    $references{$data->{reference}} = $reference;
+    
+    $c->render(json => $payment);
+};
+
+# Verificar status
+get '/api/v1/payments/status/:reference' => sub {
+    my $c = shift;
+    my $reference = $c->stash('reference');
+    
+    my $payment = $payments{$reference};
+    
+    unless ($payment) {
+        return $c->render(json => { error => 'Payment not found' }, status => 404);
+    }
+    
+    # Simular pagamento após 30 segundos
+    if ($payment->{status} eq 'pending') {
+        my $created = DateTime::Format::ISO8601->parse_datetime($payment->{created_at});
+        if (DateTime->now->epoch - $created->epoch > 30) {
+            $payment->{status} = 'paid';
+            $payment->{paid_at} = DateTime->now->iso8601;
+        }
+    }
+    
+    $c->render(json => $payment);
+};
+
+# Webhook para notificações
+post '/api/v1/webhook' => sub {
+    my $c = shift;
+    my $data = $c->req->json;
+    
+    # Validar assinatura
+    my $signature = $c->req->headers->header('X-EMIS-Signature');
+    my $payload = $c->req->body;
+    my $expected = hmac_sha1_sum($payload, app->config->{mock_secret});
+    
+    unless ($signature eq $expected) {
+        return $c->render(json => { error => 'Invalid signature' }, status => 401);
+    }
+    
+    # Processar notificação
+    if ($data->{event} eq 'payment.confirmed') {
+        my $reference = $data->{reference};
+        if ($payments{$reference}) {
+            $payments{$reference}->{status} = 'paid';
+            $payments{$reference}->{paid_at} = DateTime->now->iso8601;
+        }
+    }
+    
+    $c->render(json => { status => 'ok' });
+};
+
+# Interface para testes manuais
+get '/' => sub {
+    my $c = shift;
+    $c->render(template => 'index', payments => [values %payments]);
+};
+
+# Templates
+__DATA__
+@@ index.html.ep
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EMIS Mock Server</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #003366; color: white; }
+        .paid { background-color: #d4edda; }
+        .pending { background-color: #fff3cd; }
+    </style>
+</head>
+<body>
+    <h1>EMIS Mock Server - Ambiente de Testes</h1>
+    
+    <h2>Pagamentos Recentes</h2>
+    <table>
+        <tr>
+            <th>Referência</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Criado</th>
+            <th>Ações</th>
+        </tr>
+        % for my $ref (keys %payments) {
+            % my $p = $payments{$ref};
+            <tr class="<%= $p->{status} %>">
+                <td><%= $p->{reference} %></td>
+                <td>Kz <%= $p->{amount} %></td>
+                <td><%= $p->{status} %></td>
+                <td><%= $p->{created_at} %></td>
+                <td>
+                    % if ($p->{status} eq 'pending') {
+                        <a href="/pay/<%= $p->{reference} %>">Simular Pagamento</a>
+                    % }
+                </td>
+            </tr>
+        % }
+    </table>
+    
+    <h2>Documentação API</h2>
+    <ul>
+        <li><strong>POST /api/v1/payments</strong> - Gerar referência</li>
+        <li><strong>GET /api/v1/payments/status/:reference</strong> - Verificar status</li>
+        <li><strong>POST /api/v1/webhook</strong> - Webhook de confirmação</li>
+    </ul>
+</body>
+</html>
+
+app->start;

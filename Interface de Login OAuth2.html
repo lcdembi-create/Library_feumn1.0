@@ -1,0 +1,219 @@
+<!-- login-oauth.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - Biblioteca FEUMN</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #003366, #001a33);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            width: 400px;
+            text-align: center;
+        }
+        
+        .logo {
+            margin-bottom: 30px;
+        }
+        
+        .logo img {
+            height: 80px;
+        }
+        
+        h1 {
+            color: #003366;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .oauth-btn {
+            background: #003366;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 15px;
+            transition: background 0.3s;
+        }
+        
+        .oauth-btn:hover {
+            background: #CC0000;
+        }
+        
+        .divider {
+            margin: 20px 0;
+            position: relative;
+            text-align: center;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: #ddd;
+        }
+        
+        .divider::before { left: 0; }
+        .divider::after { right: 0; }
+        
+        .divider span {
+            background: white;
+            padding: 0 10px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .local-login {
+            margin-top: 20px;
+        }
+        
+        .local-login a {
+            color: #003366;
+            text-decoration: none;
+        }
+        
+        .local-login a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <img src="/images/logo-feumn.png" alt="FEUMN Logo">
+        </div>
+        
+        <h1>Biblioteca FEUMN</h1>
+        <div class="subtitle">Faculdade de Economia</div>
+        
+        <div id="alert" class="alert"></div>
+        
+        <button id="oauth-login" class="oauth-btn">
+            🔐 Entrar com conta UMN
+        </button>
+        
+        <div class="divider">
+            <span>ou</span>
+        </div>
+        
+        <div class="local-login">
+            <a href="/cgi-bin/koha/opac-user.pl">Login local (biblioteca)</a>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('oauth-login').addEventListener('click', async () => {
+            try {
+                // Gerar state para proteção CSRF
+                const state = Math.random().toString(36).substring(7);
+                sessionStorage.setItem('oauth_state', state);
+                
+                // Redirecionar para autorização
+                const authUrl = new URL('/oauth2/authorize', window.location.origin);
+                authUrl.searchParams.append('response_type', 'code');
+                authUrl.searchParams.append('client_id', 'biblioteca_feumn');
+                authUrl.searchParams.append('redirect_uri', window.location.origin + '/oauth/callback');
+                authUrl.searchParams.append('scope', 'openid profile email');
+                authUrl.searchParams.append('state', state);
+                
+                window.location.href = authUrl.toString();
+            } catch (error) {
+                showAlert('Erro ao iniciar login: ' + error.message, 'error');
+            }
+        });
+        
+        // Processar callback
+        (async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+            
+            if (error) {
+                showAlert('Erro na autenticação: ' + error, 'error');
+                return;
+            }
+            
+            if (code) {
+                // Verificar state
+                const savedState = sessionStorage.getItem('oauth_state');
+                if (state !== savedState) {
+                    showAlert('Erro de segurança: state inválido', 'error');
+                    return;
+                }
+                
+                try {
+                    // Trocar code por token
+                    const response = await fetch('/oauth2/token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code })
+                    });
+                    
+                    if (!response.ok) throw new Error('Falha na autenticação');
+                    
+                    const data = await response.json();
+                    
+                    // Armazenar token
+                    localStorage.setItem('access_token', data.access_token);
+                    
+                    // Redirecionar para dashboard
+                    showAlert('Login realizado com sucesso! Redirecionando...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/opac-user.pl';
+                    }, 2000);
+                } catch (error) {
+                    showAlert('Erro ao processar login: ' + error.message, 'error');
+                }
+            }
+        })();
+        
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert ${type}`;
+            alert.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

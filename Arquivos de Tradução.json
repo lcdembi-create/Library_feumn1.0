@@ -1,0 +1,63 @@
+// feumn-pt.json
+{
+    "library_name": "Biblioteca FEUMN",
+    "welcome_message": "Bem-vindo à Biblioteca da Faculdade de Economia",
+    
+    "taxes": {
+        "annual_fee": "Taxa Anual",
+        "payment_pending": "Pagamento Pendente",
+        "payment_confirmed": "Pagamento Confirmado",
+        "generate_reference": "Gerar Referência",
+        "pay_now": "Pagar Agora",
+        "amount": "Valor",
+        "due_date": "Data de Vencimento",
+        "reference": "Referência",
+        
+        "messages": {
+            "payment_success": "Pagamento confirmado com sucesso!",
+            "payment_failed": "Falha no pagamento. Tente novamente.",
+            "access_blocked": "Acesso bloqueado devido a pagamento pendente",
+            "access_granted": "Acesso liberado até {valid_until}"
+        }
+    },
+    
+    "errors": {
+        "generic": "Ocorreu um erro. Tente novamente.",
+        "not_found": "Registro não encontrado",
+        "unauthorized": "Acesso não autorizado",
+        "validation": "Dados inválidos: {field}",
+        "connection": "Erro de conexão com o servidor"
+    },
+    
+    "faculties": {
+        "FEUMN": "Faculdade de Economia",
+        "FDU": "Faculdade de Direito",
+        "FCS": "Faculdade de Ciências Sociais",
+        "FCT": "Faculdade de Ciências e Tecnologias",
+        "FMC": "Faculdade de Medicina"
+    },
+    
+    "months": {
+        "1": "Janeiro",
+        "2": "Fevereiro",
+        "3": "Março",
+        "4": "Abril",
+        "5": "Maio",
+        "6": "Junho",
+        "7": "Julho",
+        "8": "Agosto",
+        "9": "Setembro",
+        "10": "Outubro",
+        "11": "Novembro",
+        "12": "Dezembro"
+    },
+    
+    "plural": {
+        "day": ["dia", "dias"],
+        "month": ["mês", "meses"],
+        "year": ["ano", "anos"],
+        "student": ["estudante", "estudantes"],
+        "book": ["livro", "livros"],
+        "payment": ["pagamento", "pagamentos"]
+    }
+}

@@ -1,0 +1,50 @@
+# No plugin Koha::Plugin::FEUMNTaxas
+
+sub new {
+    my ($class, $args) = @_;
+    my $self = $class->SUPER::new($args);
+    
+    # Inicializar cache
+    $self->{cache} = Koha::Cache::FEUMN->new(
+        namespace => 'feumn:taxas',
+        default_ttl => 300  # 5 minutos
+    );
+    
+    return $self;
+}
+
+sub verificar_pagamento {
+    my ($self, $reference) = @_;
+    
+    # Tentar cache primeiro
+    my $cached = $self->{cache}->get("payment:$reference");
+    return $cached if $cached;
+    
+    # Consultar EMIS
+    my $result = $self->_consultar_emis($reference);
+    
+    # Cachear resultado (TTL menor para pending)
+    my $ttl = $result->{status} eq 'paid' ? 3600 : 60;
+    $self->{cache}->set("payment:$reference", $result, $ttl);
+    
+    return $result;
+}
+
+sub get_categorias_cached {
+    my ($self, $faculdade_id) = @_;
+    
+    return $self->{cache}->remember(
+        "categorias:$faculdade_id",
+        3600,  # 1 hora
+        sub {
+            $self->_buscar_categorias_do_banco($faculdade_id);
+        }
+    );
+}
+
+sub invalidate_user_cache {
+    my ($self, $borrowernumber) = @_;
+    
+    $self->{cache}->delete("user:$borrowernumber");
+    $self->{cache}->delete("payments:user:$borrowernumber");
+}

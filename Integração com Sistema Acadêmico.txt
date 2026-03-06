@@ -1,0 +1,130 @@
+package Koha::Auth::OAuth2::FEUMN;
+
+use Modern::Perl;
+use Mojo::UserAgent;
+use Mojo::JSON qw(encode_json decode_json);
+use Mojo::Util qw(secure_compare);
+use Crypt::JWT qw(encode_jwt decode_jwt);
+use Try::Tiny;
+
+our $VERSION = '1.0.0';
+
+sub new {
+    my ($class, %params) = @_;
+    
+    my $self = bless {
+        client_id      => $params{client_id}      // $ENV{OAUTH_CLIENT_ID},
+        client_secret  => $params{client_secret}  // $ENV{OAUTH_CLIENT_SECRET},
+        auth_url       => $params{auth_url}       // 'https://auth.umn.ao/oauth2/authorize',
+        token_url      => $params{token_url}      // 'https://auth.umn.ao/oauth2/token',
+        userinfo_url   => $params{userinfo_url}   // 'https://auth.umn.ao/oauth2/userinfo',
+        redirect_uri   => $params{redirect_uri}   // 'https://biblioteca.fe-umn.ao/oauth/callback',
+        scope          => $params{scope}           // 'openid profile email',
+    }, $class;
+    
+    return $self;
+}
+
+sub get_authorization_url {
+    my ($self, $state) = @_;
+    
+    my $params = {
+        response_type => 'code',
+        client_id     => $self->{client_id},
+        redirect_uri  => $self->{redirect_uri},
+        scope         => $self->{scope},
+        state         => $state,
+    };
+    
+    return $self->{auth_url} . '?' . $self->_build_query($params);
+}
+
+sub exchange_code {
+    my ($self, $code) = @_;
+    
+    my $ua = Mojo::UserAgent->new;
+    
+    my $response = $ua->post($self->{token_url} => form => {
+        grant_type    => 'authorization_code',
+        code          => $code,
+        redirect_uri  => $self->{redirect_uri},
+        client_id     => $self->{client_id},
+        client_secret => $self->{client_secret},
+    });
+    
+    if ($response->res->is_success) {
+        return decode_json($response->res->body);
+    }
+    
+    return undef;
+}
+
+sub get_user_info {
+    my ($self, $access_token) = @_;
+    
+    my $ua = Mojo::UserAgent->new;
+    
+    my $response = $ua->get($self->{userinfo_url} => {
+        Authorization => "Bearer $access_token"
+    });
+    
+    if ($response->res->is_success) {
+        return decode_json($response->res->body);
+    }
+    
+    return undef;
+}
+
+sub validate_token {
+    my ($self, $token) = @_;
+    
+    try {
+        my $payload = decode_jwt(token => $token,
+            key => $self->{client_secret},
+            accept_alg => ['HS256']
+        );
+        
+        # Verificar expiração
+        if ($payload->{exp} && $payload->{exp} < time()) {
+            return undef; # Token expirado
+        }
+        
+        return $payload;
+    }
+    catch {
+        return undef;
+    };
+}
+
+sub create_jwt {
+    my ($self, $user_data, $expires_in) = @_;
+    
+    $expires_in //= 3600; # 1 hora
+    
+    my $payload = {
+        sub   => $user_data->{id},
+        email => $user_data->{email},
+        name  => $user_data->{name},
+        iat   => time(),
+        exp   => time() + $expires_in,
+        iss   => 'https://biblioteca.fe-umn.ao',
+    };
+    
+    return encode_jwt(payload => $payload,
+        key => $self->{client_secret},
+        alg => 'HS256'
+    );
+}
+
+sub _build_query {
+    my ($self, $params) = @_;
+    
+    my @pairs;
+    foreach my $key (sort keys %$params) {
+        push @pairs, "$key=" . uri_escape($params->{$key});
+    }
+    
+    return join('&', @pairs);
+}
+
+1;

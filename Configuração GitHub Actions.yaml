@@ -1,0 +1,141 @@
+name: Security Scan FEUMN
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # Diário às 2h
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: koha_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Perl
+      uses: shogo82148/actions-setup-perl@v1
+      with:
+        perl-version: '5.34'
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libtest-most-perl libtest-pod-perl \
+          libtest-pod-coverage-perl libtest-perl-critic-perl \
+          sqlmap nikto nmap
+        cpanm --installdeps .
+
+    - name: Perl Critic
+      run: |
+        perlcritic --brutal --verbose 8 lib/ t/ 2>&1 | tee perlcritic-report.txt
+
+    - name: Taint Check
+      run: |
+        find lib -name "*.pm" -exec perl -T -c {} \;
+
+    - name: SQLMap Tests
+      run: |
+        # Iniciar servidor de teste
+        perl mock/emis_mock_server.pl daemon -l http://localhost:3000 &
+        sleep 5
+        
+        # Scan SQL injection
+        sqlmap -u "http://localhost:3000/api/v1/payments/status/1" \
+          --batch --level=2 --risk=2 --dbms=mysql \
+          --output-dir=reports/sqlmap
+
+    - name: OWASP ZAP Scan
+      uses: zaproxy/action-full-scan@v0.4.0
+      with:
+        target: 'http://localhost:3000'
+        rules_file_name: '.zap/rules.tsv'
+        cmd_options: '-a'
+
+    - name: Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'FEUMN Koha'
+        path: '.'
+        format: 'HTML'
+        args: >
+          --failOnCVSS 7
+          --enableRetired
+
+    - name: Trivy Vulnerability Scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy results to GitHub
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Bandit Python Scan
+      run: |
+        pip install bandit
+        bandit -r . -f json -o bandit-report.json
+
+    - name: ESLint Security
+      run: |
+        npm install eslint-plugin-security
+        npx eslint --plugin security --ext .js . --format json --output-file eslint-security.json || true
+
+    - name: Generate Security Report
+      run: |
+        cat > security-report.md << 'EOF'
+        # Relatório de Segurança FEUMN
+        
+        ## Resumo
+        - Data: $(date)
+        - Commit: ${{ github.sha }}
+        
+        ## Scans Executados
+        - ✅ Perl Critic
+        - ✅ SQL Injection
+        - ✅ OWASP ZAP
+        - ✅ Dependency Check
+        - ✅ Trivy
+        - ✅ Bandit
+        - ✅ ESLint Security
+        
+        ## Vulnerabilidades Encontradas
+        EOF
+        
+        cat reports/* >> security-report.md
+
+    - name: Upload Security Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          reports/
+          *.sarif
+          *.json
+          security-report.md
+
+    - name: Notify on Slack
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

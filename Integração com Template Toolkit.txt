@@ -1,0 +1,18 @@
+# Adicionar ao template toolkit
+sub tt_plugins {
+    my $self = shift;
+    
+    return {
+        i18n => sub {
+            my ($stash, $key, @params) = @_;
+            my $i18n = Koha::I18N::FEUMN->new($stash->{lang});
+            return $i18n->t($key, @params);
+        },
+        
+        n => sub {
+            my ($stash, $singular, $plural, $n, @params) = @_;
+            my $i18n = Koha::I18N::FEUMN->new($stash->{lang});
+            return $i18n->n($singular, $plural, $n, @params);
+        }
+    };
+}

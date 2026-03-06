@@ -1,0 +1,155 @@
+package Koha::Logging::FEUMN;
+
+use Modern::Perl;
+use Log::Log4perl qw(:easy);
+use Log::Log4perl::Layout::PatternLayout;
+use Log::Log4perl::Appender::File;
+use Log::Log4perl::Appender::Screen;
+use JSON::XS;
+
+our $VERSION = '1.0.0';
+
+sub new {
+    my ($class, %params) = @_;
+    
+    my $self = bless {
+        log_level   => $params{log_level} // 'INFO',
+        log_dir     => $params{log_dir} // '/var/log/koha/feumn',
+        max_size    => $params{max_size} // 10485760, # 10MB
+        backups     => $params{backups} // 5,
+    }, $class;
+    
+    $self->_init_logging();
+    return $self;
+}
+
+sub _init_logging {
+    my $self = shift;
+    
+    # Criar diretório de logs se não existir
+    unless (-d $self->{log_dir}) {
+        mkdir $self->{log_dir} or die "Não foi possível criar diretório de logs: $!";
+    }
+    
+    # Configuração do Log4perl
+    my $conf = qq(
+        log4perl.rootLogger = $self->{log_level}, FILE, SCREEN
+        
+        log4perl.appender.FILE = Log::Log4perl::Appender::File
+        log4perl.appender.FILE.filename = $self->{log_dir}/feumn.log
+        log4perl.appender.FILE.mode = append
+        log4perl.appender.FILE.autoflush = 1
+        log4perl.appender.FILE.layout = PatternLayout
+        log4perl.appender.FILE.layout.ConversionPattern = %d [%p] %m at %F line %L%n
+        log4perl.appender.FILE.umask = 0077
+        log4perl.appender.FILE.syswrite = 1
+        log4perl.appender.FILE.owner = koha
+        log4perl.appender.FILE.group = koha
+        
+        log4perl.appender.SCREEN = Log::Log4perl::Appender::Screen
+        log4perl.appender.SCREEN.stderr = 0
+        log4perl.appender.SCREEN.layout = PatternLayout
+        log4perl.appender.SCREEN.layout.ConversionPattern = %d [%p] %m%n
+        
+        log4perl.logger.taxas = INFO, TAXAS_FILE
+        log4perl.appender.TAXAS_FILE = Log::Log4perl::Appender::File
+        log4perl.appender.TAXAS_FILE.filename = $self->{log_dir}/taxas.log
+        log4perl.appender.TAXAS_FILE.mode = append
+        log4perl.appender.TAXAS_FILE.layout = PatternLayout
+        log4perl.appender.TAXAS_FILE.layout.ConversionPattern = %d [%p] %m%n
+        
+        log4perl.logger.security = INFO, SECURITY_FILE
+        log4perl.appender.SECURITY_FILE = Log::Log4perl::Appender::File
+        log4perl.appender.SECURITY_FILE.filename = $self->{log_dir}/security.log
+        log4perl.appender.SECURITY_FILE.mode = append
+        log4perl.appender.SECURITY_FILE.layout = PatternLayout
+        log4perl.appender.SECURITY_FILE.layout.ConversionPattern = %d [%p] %m%n
+        
+        # Rotação de logs
+        log4perl.appender.FILE.LogRollover = 1
+        log4perl.appender.FILE.MaxFileSize = $self->{max_size}
+        log4perl.appender.FILE.MaxBackupIndex = $self->{backups}
+    );
+    
+    Log::Log4perl::init(\$conf);
+    
+    $self->{logger} = {
+        root    => Log::Log4perl->get_logger(),
+        taxas   => Log::Log4perl->get_logger('taxas'),
+        security=> Log::Log4perl->get_logger('security'),
+    };
+}
+
+sub log_taxa {
+    my ($self, $level, $message, $data) = @_;
+    
+    my $logger = $self->{logger}{taxas};
+    my $log_entry = $message;
+    
+    if ($data) {
+        $log_entry .= " | " . encode_json({
+            timestamp => time(),
+            data => $data
+        });
+    }
+    
+    $logger->$level($log_entry);
+}
+
+sub log_security {
+    my ($self, $level, $message, $context) = @_;
+    
+    my $logger = $self->{logger}{security};
+    my $log_entry = sprintf("[%s] %s | IP: %s | User: %s",
+        $context->{action} // 'unknown',
+        $message,
+        $context->{ip} // '0.0.0.0',
+        $context->{user} // 'anonymous'
+    );
+    
+    $logger->$level($log_entry);
+}
+
+sub log_error {
+    my ($self, $error, $context) = @_;
+    
+    my $logger = $self->{logger}{root};
+    my $log_entry = sprintf("ERROR: %s\nStack trace:\n%s",
+        $error,
+        Carp::longmess()
+    );
+    
+    $logger->error($log_entry);
+    
+    # Enviar alerta por email para erros críticos
+    if ($context->{critical}) {
+        $self->_send_alert($error, $context);
+    }
+}
+
+sub _send_alert {
+    my ($self, $error, $context) = @_;
+    
+    eval {
+        use Email::Sender::Simple qw(sendmail);
+        use Email::Simple;
+        use Email::Simple::Creator;
+        
+        my $email = Email::Simple->create(
+            header => [
+                To      => $context->{alert_email} // 'admin@fe-umn.ao',
+                From    => 'sistema@biblioteca.fe-umn.ao',
+                Subject => "[ALERTA CRÍTICO] " . ($context->{subject} // 'Erro no Sistema'),
+            ],
+            body => "Erro: $error\n\nContexto: " . encode_json($context) . "\n\nTimestamp: " . localtime()
+        );
+        
+        sendmail($email);
+    };
+    
+    if ($@) {
+        $self->{logger}{root}->error("Falha ao enviar alerta por email: $@");
+    }
+}
+
+1;
